@@ -1,0 +1,81 @@
+use('db_mongoCitas');
+db.createCollection('medico',{
+    capped: true ,
+    size: 5000,
+    max: 10,
+    validator:{
+        $jsonSchema:{
+            bsonType: 'object',
+            additionalProperties: false,
+            required:['med_profRegistrationNumber','med_fullName','med_office','med_specialty'],
+            properties:{
+                _id:{
+                    bsonType:'objectId'
+                },
+                med_nroMatriculaProfesional:{
+                    bsonType:'int',
+                    description: `{"status": "402", "message": 'El parametro med_profRegistrationNumber es obligatorio y debe ser un entero.'}`,
+                    pattern:"/^[0-9]+$/"
+                },
+                med_nombreCompleto:{
+                    bsonType:'string',
+                    description: `{"status": "402", "message": 'El parametro med_fullName es obligatorio y debe tener solo letras.'}`,
+                    pattern:"/^[a-zA-Z]+$/"
+                },
+                med_consultorio:{
+                    bsonType:'int',
+                    description: `{"status": "402", "message": 'El parametro med_office es obligatorio y debe tener solo números enteros.'}`,
+                    pattern:"/^[0-9]+$/"
+                },
+                med_especialidad:{
+                    bsonType:'string',
+                    description: `{"status": "402", "message": 'El parametro med_specialty es obligatorio y debe tener solo letras.'}`,
+                    pattern:"/^[a-zA-Z]+$/"
+                } 
+            }
+        }
+    }
+});
+
+use('db_mongoCitas');
+db.createCollection('cita',{
+    capped: true ,
+    size: 5000,
+    max: 10,
+    validator:{
+        $jsonSchema:{
+            bsonType: 'object',
+            additionalProperties: false,
+            required:['cit_code','cit_fecha','cit_estado','cit_medico','cit_idUsuario'],
+            properties:{
+                _id:{
+                    bsonType:'objectId'
+                },
+                cit_codigo:{
+                    bsonType:'int',
+                    description: `{"status": "402", "message": 'El parametro cit_code es obligatorio y debe ser un entero.'}`,
+                    pattern:"/^[0-9]+$/"
+                },
+                cit_date:{
+                    bsonType:'date',
+                    description: `{"status": "402", "message": 'El parametro cit_fecha es obligatorio y debe tener solo el formato YY-MM-DD.'}`,
+                },
+                cit_status :{
+                    bsonType:'string',
+                    description: `{"status": "402", "message": 'El parametro cit_estado es obligatorio y debe tener solo números enteros.'}`,
+                    pattern:"/^[a-zA-Z]+$/"
+                },
+                cit_medic:{
+                    bsonType:'string',
+                    description: `{"status": "402", "message": 'El parametro cit_medico es obligatorio y debe tener solo letras.'}`,
+                    pattern:"/^[a-zA-Z]+$/"
+                },
+                cit_idUser:{
+                    bsonType:'int',
+                    description: `{"status": "402", "message": 'El parametro cit_idUsuario es obligatorio y debe tener solo números enteros.'}`,
+                    pattern:"/^[0-9]+$/"
+                }
+            }
+        }
+    }
+});
