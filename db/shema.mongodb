@@ -7,29 +7,29 @@ db.createCollection('medico',{
         $jsonSchema:{
             bsonType: 'object',
             additionalProperties: false,
-            required:['med_profRegistrationNumber','med_fullName','med_office','med_specialty'],
+            required: ['_id', 'nroMatriculaProfesional', 'nombreCompleto','med_consultorio','especialidad'],
             properties:{
                 _id:{
                     bsonType:'objectId'
                 },
-                med_nroMatriculaProfesional:{
+                med_profRegistrationNumber :{
                     bsonType:'int',
-                    description: `{"status": "402", "message": 'El parametro med_profRegistrationNumber es obligatorio y debe ser un entero.'}`,
+                    description: `{"status": "402", "message": 'El parametro nroMatriculaProfesional es obligatorio y debe ser entero.'}`,
                     pattern:"/^[0-9]+$/"
                 },
-                med_nombreCompleto:{
+                fullName:{
                     bsonType:'string',
-                    description: `{"status": "402", "message": 'El parametro med_fullName es obligatorio y debe tener solo letras.'}`,
+                    description: `{"status": "402", "message": 'El parametro nombreCompleto es obligatorio y debe tener solo letras.'}`,
                     pattern:"/^[a-zA-Z]+$/"
                 },
-                med_consultorio:{
+                office:{
                     bsonType:'int',
-                    description: `{"status": "402", "message": 'El parametro med_office es obligatorio y debe tener solo números enteros.'}`,
+                    description: `{"status": "402", "message": 'El parametro med_consultorio es obligatorio y debe tener solo números enteros.'}`,
                     pattern:"/^[0-9]+$/"
                 },
-                med_especialidad:{
+                specialty:{
                     bsonType:'string',
-                    description: `{"status": "402", "message": 'El parametro med_specialty es obligatorio y debe tener solo letras.'}`,
+                    description: `{"status": "402", "message": 'El parametro especialidad es obligatorio y debe tener solo letras.'}`,
                     pattern:"/^[a-zA-Z]+$/"
                 } 
             }
@@ -46,36 +46,370 @@ db.createCollection('cita',{
         $jsonSchema:{
             bsonType: 'object',
             additionalProperties: false,
-            required:['cit_code','cit_fecha','cit_estado','cit_medico','cit_idUsuario'],
+            required:['_id','id','fecha','estado','medico','idUsuario'],
             properties:{
                 _id:{
                     bsonType:'objectId'
                 },
-                cit_codigo:{
-                    bsonType:'int',
-                    description: `{"status": "402", "message": 'El parametro cit_code es obligatorio y debe ser un entero.'}`,
-                    pattern:"/^[0-9]+$/"
+                id:{
+                    bsonType: 'int',
+                    description: `{"status": "402", "message": 'El parametro id es obligatorio y debe ser un número entero'}`,
                 },
-                cit_date:{
+                date:{
                     bsonType:'date',
-                    description: `{"status": "402", "message": 'El parametro cit_fecha es obligatorio y debe tener solo el formato YY-MM-DD.'}`,
+                    description: `{"status": "402", "message": 'El parametro fecha es obligatorio y debe tener solo el formato YY-MM-DD.'}`,
                 },
-                cit_status :{
+                status :{
                     bsonType:'string',
-                    description: `{"status": "402", "message": 'El parametro cit_estado es obligatorio y debe tener solo números enteros.'}`,
+                    description: `{"status": "402", "message": 'El parametro estado es obligatorio y debe tener solo números enteros.'}`,
                     pattern:"/^[a-zA-Z]+$/"
                 },
-                cit_medic:{
+                medic:{
                     bsonType:'string',
-                    description: `{"status": "402", "message": 'El parametro cit_medico es obligatorio y debe tener solo letras.'}`,
+                    description: `{"status": "402", "message": 'El parametro medico es obligatorio y debe tener solo letras.'}`,
                     pattern:"/^[a-zA-Z]+$/"
                 },
-                cit_idUser:{
+                idUser:{
                     bsonType:'int',
-                    description: `{"status": "402", "message": 'El parametro cit_idUsuario es obligatorio y debe tener solo números enteros.'}`,
+                    description: `{"status": "402", "message": 'El parametro idUsuario es obligatorio y debe tener solo números enteros.'}`,
                     pattern:"/^[0-9]+$/"
                 }
             }
         }
     }
 });
+use("db_mongoCitas");
+db.createCollection("autoIncrement");
+db.autoIncrement.insertMany([
+    { id: "usuarioId", sequence_value: 0 },
+    { id: "citaId", sequence_value: 0 },
+    { id: "medicoId", sequence_value: 0 },
+    { id: "acudienteId", sequence_value: 0 },
+    { id: "rolesId", sequence_value: 0 }
+]);
+
+function autoIncrement(coleccion) {
+    const sequenceDocument = db.counters.findOneAndUpdate(
+        { id: `${coleccion}Id` },
+        { $inc: { sequence_value: 1 } },
+        { returnDocument: "after" }
+    );  
+    return sequenceDocument.sequence_value;
+}
+
+use('db_mongoCitas');
+db.createCollection("usuario", {
+    capped: true,
+    size: 5000,
+    max: 50,
+    validator: {
+        $jsonSchema: {
+            bsonType: 'object',
+            additionalProperties: false,
+            required: ['_id', 'id', 'fullName', 'phoneNumber', 'address', 'docType'],
+            properties: {
+                _id: {
+                    bsonType: "objectId",
+                },
+                id: {
+                    bsonType: "int",
+                    description: "id del usuario debe ser entero"
+                },
+                fullName: {
+                    bsonType: 'string',
+                    description: 'El nombreCompleto es obligatorio y solo debe tener letras',
+                    pattern: "/^[a-zA-Z]+$/"
+                },
+                phoneNumber: {
+                    bsonType: 'int',
+                    description: 'El telefono es solo recibe números enteros'
+                },
+                address: {
+                    bsonType: 'string',
+                    description: 'El direccion es obligatorio'
+                },
+                email: {
+                    bsonType: 'string',
+                    description: 'El correo debe ser en formato string'
+                },
+                docType: {
+                    bsonType: 'string',
+                    description: 'El tipodoc es obligatorio y debe ser en formato string'
+                },
+                gender: {
+                    bsonType: 'string',
+                    enum: ["Masculino", "Femenino", "Otro"],
+                    description: 'El genero debe ser en formato string y solo puede ser Masculino, Femenino u Otro'
+                },
+                acudiente: {
+                    bsonType: 'int',
+                    description: 'El acudiente es obligatorio y debe ser un numero entero'
+                }
+            }
+        }
+    }
+});
+
+db.usuario.insertMany([
+    {
+        id: Number(autoIncrement("usuario")),
+        fullName: 'Juan david Pérez Gómez',
+        phoneNumber: '1234567890',
+        address: 'Calle 123, Ciudad',
+        email: 'juan@example.com',
+        docType: 'Cédula de Ciudadanía',
+        genero: 'Masculino'
+    },
+    {
+        id: Number(autoIncrement("usuario")),
+        nombre: 'María Fernanda Rodríguez García',
+        phoneNumber: '9876543210',
+        address: 'Calle 123, Ciudad',
+        email: 'maria@example.com',
+        docType: 'Cédula de Ciudadanía',
+        genero: 'Femenino'
+    },
+    {
+        id: Number(autoIncrement("usuario")),
+        nombre: 'Carlos González Sánchez',
+        phoneNumber: '5555555555',
+        address: 'Calle 123, Ciudad',
+        email: 'carlos@example.com',
+        docType: 'Tarjeta de Identidad',
+        genero: 'Masculino',
+        acudiente: 1
+    },
+    {
+        id: Number(autoIncrement("usuario")),
+        nombre: 'Ana María López Torres',
+        phoneNumber: '9999999999',
+        address: 'Calle 123, Ciudad',
+        email: 'ana@example.com',
+        docType: 'Cédula de Ciudadanía',
+        genero: 'Femenino',
+    },
+    {
+        id: Number(autoIncrement("usuario")),
+        nombre: 'Pedro Ramírez Sánchez',
+        phoneNumber: '1111111111',
+        address: 'Calle 123, Ciudad',
+        email: 'pedro@example.com',
+        docType: 'Tarjeta de Identidad',
+        genero: 'Otro',
+        acudiente: 2
+    }
+])
+
+db.createCollection("acudiente", {
+    capped: true,
+    size: 5000,
+    max: 50,
+    validator: {
+        $jsonSchema: {
+            bsonType: 'object',
+            additionalProperties: false,
+            required: ['_id', 'id', 'nombreCompleto', 'telefono', 'direccion'],
+            properties: {
+                _id: {
+                    bsonType: "objectId",
+                    description: "ID del acudiente generado por mongoDB"
+                },
+                id: {
+                    bsonType: "int",
+                    description: "ID del acudiente"
+                },
+                nombreCompleto: {
+                    bsonType: 'string',
+                    description: 'El nombreCompleto_acudiente es obligatorio',
+                },
+                telefono: {
+                    bsonType: 'string',
+                    description: 'El telefono es obligatorio',
+                },
+                direccion: {
+                    bsonType: 'string',
+                    description: 'El direccion es obligatorio'
+                }
+            }
+        }
+    }
+});
+
+db.acudiente.insertMany([
+    {
+        id: Number(siguienteId("acudiente")),
+        nombreCompleto: 'María López',
+        telefono: '987654321',
+        direccion: 'Calle 123, Ciudad'
+    },
+    {
+        id: Number(siguienteId("acudiente")),
+        nombreCompleto: 'Carlos Sánchez',
+        telefono: '555555555',
+        direccion: 'Avenida 456, Pueblo'
+    },
+    {
+        id: Number(siguienteId("acudiente")),
+        nombreCompleto: 'Ana Torres',
+        telefono: '999999999',
+        direccion: 'Plaza 789, Villa'
+    },
+    {
+        id: Number(siguienteId("acudiente")),
+        nombreCompleto: 'Luis Pérez',
+        telefono: '111111111',
+        direccion: 'Avenida 789, Ciudad'
+    },
+    {
+        id: Number(siguienteId("acudiente")),
+        nombreCompleto: 'Elena Gómez',
+        telefono: '222222222',
+        direccion: 'Calle 456, Pueblo'
+    }
+]);
+
+db.createCollection("medico", {
+    capped: true,
+    size: 5000,
+    max: 50,
+    validator: {
+        $jsonSchema: {
+            bsonType: 'object',
+            additionalProperties: false,
+            required: ['_id', 'id', 'nombreCompleto', 'consultorio', 'especialidad'],
+            properties: {
+                _id: {
+                    bsonType: "objectId",
+                    description: "ID del medico generado por mongoDB"
+                },
+                id: {
+                    bsonType: "int",
+                    description: "ID del medico"
+                },
+                nombreCompleto: {
+                    bsonType: 'string',
+                    description: 'El nombreCompleto_medico es obligatorio',
+                },
+                consultorio: {
+                    bsonType: 'string',
+                    description: 'El consultorio es obligatorio',
+                },
+                especialidad: {
+                    bsonType: 'string',
+                    description: 'El especialidad es obligatorio'
+                }
+            }
+        }
+    }
+});
+
+db.medico.insertMany([
+    {
+        id: Number(siguienteId("medico")),
+        nombreCompleto: 'Dr. Juan Pérez',
+        consultorio: 'Consultorio A',
+        especialidad: 'Cardiología'
+    },
+    {
+        id: Number(siguienteId("medico")),
+        nombreCompleto: 'Dra. Ana Rodríguez',
+        consultorio: 'Consultorio B',
+        especialidad: 'Dermatología'
+    },
+    {
+        id: Number(siguienteId("medico")),
+        nombreCompleto: 'Dr. Luis Martínez',
+        consultorio: 'Consultorio C',
+        especialidad: 'Pediatría'
+    },
+    {
+        id: Number(siguienteId("medico")),
+        nombreCompleto: 'Dra. Laura Gómez',
+        consultorio: 'Consultorio D',
+        especialidad: 'Oftalmología'
+    },
+    {
+        id: Number(siguienteId("medico")),
+        nombreCompleto: 'Dr. Carlos Sánchez',
+        consultorio: 'Consultorio E',
+        especialidad: 'Neurología'
+    }
+]);
+
+db.createCollection("cita", {
+    capped: true,
+    size: 5000,
+    max: 50,
+    validator: {
+        $jsonSchema: {
+            bsonType: 'object',
+            additionalProperties: false,
+            required: ['_id', 'id', 'fecha', 'estado', 'medico', 'datosUsuario'],
+            properties: {
+                _id: {
+                    bsonType: "objectId",
+                    description: "ID del cita generado por mongoDB"
+                },
+                id: {
+                    bsonType: "int",
+                    description: "ID de la cita"
+                },
+                fecha: {
+                    bsonType: 'date',
+                    description: 'El fecha_usuario es obligatorio',
+                },
+                estado: {
+                    bsonType: 'string',
+                    description: 'El estado es obligatorio',
+                },
+                medico: {
+                    bsonType: 'int',
+                    description: 'El medico es obligatorio'
+                },
+                datosUsuario: {
+                    bsonType: 'int',
+                    description: 'El datosUsuario es obligatorio'
+                }
+            }
+        }
+    }
+});
+
+db.cita.insertMany([
+    {
+        id: Number(siguienteId("cita")),
+        fecha: ISODate('2023-07-19'),
+        estado: 'Realizada',
+        medico: 1,
+        datosUsuario: 1
+    },
+    {
+        id: Number(siguienteId("cita")),
+        fecha: ISODate('2023-05-13'),
+        estado: 'Realizada',
+        medico: 2,
+        datosUsuario: 2
+    },
+    {
+        id: Number(siguienteId("cita")),
+        fecha: ISODate('2023-07-23'),
+        estado: 'Realizada',
+        medico: 3,
+        datosUsuario: 3
+    },
+    {
+        id: Number(siguienteId("cita")),
+        fecha: ISODate('2023-07-30'),
+        estado: 'Realizada',
+        medico: 4,
+        datosUsuario: 4
+    },
+    {
+        id: Number(siguienteId("cita")),
+        fecha: ISODate('2023-07-05'),
+        estado: 'Rechazada',
+        medico: 5,
+        datosUsuario: 5
+
+    }
+]);
