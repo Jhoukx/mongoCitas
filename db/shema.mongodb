@@ -1,86 +1,6 @@
-use('db_mongoCitas');
-db.createCollection('medico',{
-    capped: true ,
-    size: 5000,
-    max: 10,
-    validator:{
-        $jsonSchema:{
-            bsonType: 'object',
-            additionalProperties: false,
-            required: ['_id', 'nroMatriculaProfesional', 'nombreCompleto','med_consultorio','especialidad'],
-            properties:{
-                _id:{
-                    bsonType:'objectId'
-                },
-                med_profRegistrationNumber :{
-                    bsonType:'int',
-                    description: `{"status": "402", "message": 'El parametro nroMatriculaProfesional es obligatorio y debe ser entero.'}`,
-                    pattern:"/^[0-9]+$/"
-                },
-                fullName:{
-                    bsonType:'string',
-                    description: `{"status": "402", "message": 'El parametro nombreCompleto es obligatorio y debe tener solo letras.'}`,
-                    pattern:"/^[a-zA-Z]+$/"
-                },
-                office:{
-                    bsonType:'int',
-                    description: `{"status": "402", "message": 'El parametro med_consultorio es obligatorio y debe tener solo números enteros.'}`,
-                    pattern:"/^[0-9]+$/"
-                },
-                specialty:{
-                    bsonType:'string',
-                    description: `{"status": "402", "message": 'El parametro especialidad es obligatorio y debe tener solo letras.'}`,
-                    pattern:"/^[a-zA-Z]+$/"
-                } 
-            }
-        }
-    }
-});
-
-use('db_mongoCitas');
-db.createCollection('cita',{
-    capped: true ,
-    size: 5000,
-    max: 10,
-    validator:{
-        $jsonSchema:{
-            bsonType: 'object',
-            additionalProperties: false,
-            required:['_id','id','fecha','estado','medico','idUsuario'],
-            properties:{
-                _id:{
-                    bsonType:'objectId'
-                },
-                id:{
-                    bsonType: 'int',
-                    description: `{"status": "402", "message": 'El parametro id es obligatorio y debe ser un número entero'}`,
-                },
-                date:{
-                    bsonType:'date',
-                    description: `{"status": "402", "message": 'El parametro fecha es obligatorio y debe tener solo el formato YY-MM-DD.'}`,
-                },
-                status :{
-                    bsonType:'string',
-                    description: `{"status": "402", "message": 'El parametro estado es obligatorio y debe tener solo números enteros.'}`,
-                    pattern:"/^[a-zA-Z]+$/"
-                },
-                medic:{
-                    bsonType:'string',
-                    description: `{"status": "402", "message": 'El parametro medico es obligatorio y debe tener solo letras.'}`,
-                    pattern:"/^[a-zA-Z]+$/"
-                },
-                idUser:{
-                    bsonType:'int',
-                    description: `{"status": "402", "message": 'El parametro idUsuario es obligatorio y debe tener solo números enteros.'}`,
-                    pattern:"/^[0-9]+$/"
-                }
-            }
-        }
-    }
-});
-use("db_mongoCitas");
-db.createCollection("autoIncrement");
-db.autoIncrement.insertMany([
+use("db_campus_citas");
+db.createCollection("autoincrement");
+db.autoincrement.insertMany([
     { id: "usuarioId", sequence_value: 0 },
     { id: "citaId", sequence_value: 0 },
     { id: "medicoId", sequence_value: 0 },
@@ -88,16 +8,22 @@ db.autoIncrement.insertMany([
     { id: "rolesId", sequence_value: 0 }
 ]);
 
-function autoIncrement(coleccion) {
-    const sequenceDocument = db.counters.findOneAndUpdate(
+function siguienteId(coleccion) {
+    const sequenceDocument = db.autoincrement.findOneAndUpdate(
         { id: `${coleccion}Id` },
         { $inc: { sequence_value: 1 } },
         { returnDocument: "after" }
-    );  
+    );
     return sequenceDocument.sequence_value;
 }
 
-use('db_mongoCitas');
+db.createCollection("roles");
+db.roles.insertMany([
+    { id: Number(siguienteId("roles")), name: "admin", access: ["/medico", "/usuario", "/cita", "/acudiente"] },
+    { id: Number(siguienteId("roles")), name: "medico", access: ["/usuario", "/cita", "/acudiente"] },
+    { id: Number(siguienteId("roles")), name: "usuario", access: ["/usuario"] }
+]);
+
 db.createCollection("usuario", {
     capped: true,
     size: 5000,
@@ -106,44 +32,58 @@ db.createCollection("usuario", {
         $jsonSchema: {
             bsonType: 'object',
             additionalProperties: false,
-            required: ['_id', 'id', 'fullName', 'phoneNumber', 'address', 'docType'],
+            required: ['_id', 'id', 'nombre', 'primer_apellido', 'telefono', 'direccion', 'tipodoc'],
             properties: {
                 _id: {
                     bsonType: "objectId",
+                    description: "ID del usuario generado por mongoDB"
                 },
                 id: {
                     bsonType: "int",
-                    description: "id del usuario debe ser entero"
+                    description: "ID del usuario"
                 },
-                fullName: {
+                nombre: {
                     bsonType: 'string',
-                    description: 'El nombreCompleto es obligatorio y solo debe tener letras',
-                    pattern: "/^[a-zA-Z]+$/"
+                    description: 'El NOMBRE es string',
                 },
-                phoneNumber: {
-                    bsonType: 'int',
-                    description: 'El telefono es solo recibe números enteros'
-                },
-                address: {
+                segundo_nombre: {
                     bsonType: 'string',
-                    description: 'El direccion es obligatorio'
+                    description: 'El SEGUNDO_NOMBRE no es obligatorio y debe ser un string',
+                },
+                primer_apellido: {
+                    bsonType: 'string',
+                    description: 'El PRIMER_APELLIDO es string'
+                },
+                segundo_apellido: {
+                    bsonType: 'string',
+                    description: 'El SEGUNDO_APELLIDO no es obligatorio y debe ser un string'
+                },
+                telefono: {
+                    bsonType: 'string',
+                    description: 'El TELEFONO es string y solo los 10 digitos',
+                    pattern: '^[0-9]{10}$'
+                },
+                direccion: {
+                    bsonType: 'string',
+                    description: 'El DIRECCION debe ser un string'
                 },
                 email: {
                     bsonType: 'string',
-                    description: 'El correo debe ser en formato string'
+                    description: 'El EMAIL no es obligatorio ni opcional pero el dato debe ser en formato string',
+                    pattern: '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
                 },
-                docType: {
+                tipodoc: {
                     bsonType: 'string',
-                    description: 'El tipodoc es obligatorio y debe ser en formato string'
+                    description: 'El TIPODOC obligatorio debe ser en formato string y ser "CC" o "TI"',
+                    enum: ["CC", "TI"]
                 },
-                gender: {
+                genero: {
                     bsonType: 'string',
-                    enum: ["Masculino", "Femenino", "Otro"],
-                    description: 'El genero debe ser en formato string y solo puede ser Masculino, Femenino u Otro'
+                    description: 'El GENERO no es obligatorio ni opcional pero el dato debe ser en formato string'
                 },
                 acudiente: {
                     bsonType: 'int',
-                    description: 'El acudiente es obligatorio y debe ser un numero entero'
+                    description: 'El ACUDIENTE no es obligatorio y debe ser un numero entero'
                 }
             }
         }
@@ -152,51 +92,65 @@ db.createCollection("usuario", {
 
 db.usuario.insertMany([
     {
-        id: Number(autoIncrement("usuario")),
-        fullName: 'Juan david Pérez Gómez',
-        phoneNumber: '1234567890',
-        address: 'Calle 123, Ciudad',
+        id: Number(siguienteId("usuario")),
+        nombre: 'Juan',
+        segundo_nombre: 'david',
+        primer_apellido: 'Pérez',
+        segundo_apellido: 'Gómez',
+        telefono: '1234567890',
+        direccion: 'Calle 123, Ciudad',
         email: 'juan@example.com',
-        docType: 'Cédula de Ciudadanía',
+        tipodoc: 'CC',
         genero: 'Masculino'
     },
     {
-        id: Number(autoIncrement("usuario")),
-        nombre: 'María Fernanda Rodríguez García',
-        phoneNumber: '9876543210',
-        address: 'Calle 123, Ciudad',
+        id: Number(siguienteId("usuario")),
+        nombre: 'María',
+        segundo_nombre: 'Fernanda',
+        primer_apellido: 'Rodríguez',
+        segundo_apellido: 'García',
+        telefono: '9876543210',
+        direccion: 'Calle 123, Ciudad',
         email: 'maria@example.com',
-        docType: 'Cédula de Ciudadanía',
+        tipodoc: 'CC',
         genero: 'Femenino'
     },
     {
-        id: Number(autoIncrement("usuario")),
-        nombre: 'Carlos González Sánchez',
-        phoneNumber: '5555555555',
-        address: 'Calle 123, Ciudad',
+        id: Number(siguienteId("usuario")),
+        nombre: 'Carlos',
+        primer_apellido: 'González',
+        segundo_apellido: 'Sánchez',
+        telefono: '5555555555',
+        direccion: 'Calle 123, Ciudad',
         email: 'carlos@example.com',
-        docType: 'Tarjeta de Identidad',
+        tipodoc: 'TI',
         genero: 'Masculino',
-        acudiente: 1
+        acudiente: 3
     },
     {
-        id: Number(autoIncrement("usuario")),
-        nombre: 'Ana María López Torres',
-        phoneNumber: '9999999999',
-        address: 'Calle 123, Ciudad',
+        id: Number(siguienteId("usuario")),
+        nombre: 'Ana',
+        segundo_nombre: 'María',
+        primer_apellido: 'López',
+        segundo_apellido: 'Torres',
+        telefono: '9999999999',
+        direccion: 'Calle 123, Ciudad',
         email: 'ana@example.com',
-        docType: 'Cédula de Ciudadanía',
+        tipodoc: 'TI',
         genero: 'Femenino',
+        acudiente: 4
     },
     {
-        id: Number(autoIncrement("usuario")),
-        nombre: 'Pedro Ramírez Sánchez',
-        phoneNumber: '1111111111',
-        address: 'Calle 123, Ciudad',
+        id: Number(siguienteId("usuario")),
+        nombre: 'Pedro',
+        primer_apellido: 'Ramírez',
+        segundo_apellido: 'Sánchez',
+        telefono: '1111111111',
+        direccion: 'Calle 123, Ciudad',
         email: 'pedro@example.com',
-        docType: 'Tarjeta de Identidad',
-        genero: 'Otro',
-        acudiente: 2
+        tipodoc: 'TI',
+        genero: 'otro',
+        acudiente: 5
     }
 ])
 
