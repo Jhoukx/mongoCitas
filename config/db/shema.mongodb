@@ -365,5 +365,15 @@ db.cita.insertMany([
         medico: 5,
         datosUsuario: 5
 
+    },
+    {
+        id: Number(siguienteId("cita")),
+        fecha: ISODate('2023-07-26'),
+        estado: 'Pendiente',
+        medico: 3,
+        datosUsuario: 3
     }
 ]);
+
+use("db_campus_citas");
+db.cita.find({ datosUsuario :3})
