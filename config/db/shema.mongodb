@@ -374,6 +374,3 @@ db.cita.insertMany([
         datosUsuario: 3
     }
 ]);
-
-use("db_campus_citas");
-db.cita.find({ datosUsuario :3})
